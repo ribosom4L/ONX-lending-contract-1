@@ -1,0 +1,16 @@
+{
+    "networks": {
+        "mainnet": {
+            "infuraKey": "",
+            "privateKey": ""
+        },
+        "ropsten": {
+            "infuraKey": "",
+            "privateKey": ""
+        },
+         "goerli": {
+             "infuraKey": "",
+             "privateKey": ""
+         }
+    }
+}

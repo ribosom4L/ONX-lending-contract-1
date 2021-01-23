@@ -1,0 +1,47 @@
+{
+  "name": "OnX",
+  "version": "1.0.0",
+  "description": "",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "npx hardhat test",
+    "compile": "npx hardhat compile",
+    "test:coverage": "npx hardhat coverage",
+    "deploy-hardhat": "npx hardhat run --network hardhat deploy/deploy.js",
+    "deploy-ropsten": "npx hardhat run --network ropsten deploy/deploy.js",
+    "deploy-mainnet": "npx hardhat run --network mainnet deploy/deploy.js"
+  },
+  "repository": {
+    "type": "git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "GPL-3.0-only",
+  "devDependencies": {
+    "@lidprotocol/xlock-contracts": "^1.0.2",
+    "@nomiclabs/hardhat-ethers": "^2.0.1",
+    "@nomiclabs/hardhat-etherscan": "^2.1.0",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@nomiclabs/hardhat-web3": "^2.0.0",
+    "@openzeppelin/contracts-ethereum-package": "^3.0.0",
+    "@openzeppelin/hardhat-upgrades": "^1.5.0",
+    "@openzeppelin/test-helpers": "^0.5.9",
+    "chai": "^4.2.0",
+    "ethereum-waffle": "^3.2.1",
+    "ethers": "^5.0.26",
+    "solidity-coverage": "^0.7.13",
+    "web3": "^1.3.1"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts-upgradeable": "^3.3.0",
+    "@uniswap/lib": "^4.0.1-alpha",
+    "@uniswap/v2-core": "^1.0.1",
+    "@uniswap/v2-periphery": "^1.1.0-beta.0",
+    "hardhat": "^2.0.6",
+    "hardhat-dependency-compiler": "^1.0.1",
+    "load-json-file": "^6.2.0",
+    "solc": "^0.6.6"
+  }
+}
