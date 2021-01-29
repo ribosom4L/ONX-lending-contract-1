@@ -101,7 +101,7 @@ describe('deploy', () => {
 		await platformContract.connect(walletDeveloper).setupConfig(configContract.address);
 		//await tokenContract.connect(walletDeveloper).setupConfig(configContract.address);
 
-		await configContract.connect(walletDeveloper).initParameter();
+		// await configContract.connect(walletDeveloper).initParameter();
 		await configContract.connect(walletDeveloper).setWallets([
 			ethers.utils.formatBytes32String("team"),
 			ethers.utils.formatBytes32String("spare"),

@@ -204,9 +204,9 @@ async function initialize() {
     console.log('ONXConfig initialize')
     await waitForMint(tx.hash)
 
-    tx = await ins.initParameter(ETHER_SEND_CONFIG)
-    console.log('ONXConfig initParameter')
-    await waitForMint(tx.hash)
+    // tx = await ins.initParameter(ETHER_SEND_CONFIG)
+    // console.log('ONXConfig initParameter')
+    // await waitForMint(tx.hash)
 
     // tx = await ins.addMintToken(LEND_TOKEN_ADDRESS, ETHER_SEND_CONFIG)
     // console.log('ONXConfig addMintToken')

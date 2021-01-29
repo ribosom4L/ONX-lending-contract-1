@@ -267,6 +267,8 @@ contract ONXPool is BaseMintField, Configurable {
 			amountIn = amountIn.sub(totalPledge);
 		}
 
+		require(amountCollateral <= amountIn , "AAAA: INVALID AMOUNT");
+
 		updateInterests();
 
 		uint256 pledgeRate = IConfig(config).getPoolValue(address(this), ConfigNames.POOL_PLEDGE_RATE);
@@ -418,7 +420,7 @@ contract ONXPool is BaseMintField, Configurable {
 		}
 	}
 
-	function getTotalAmount() external view returns (uint256) {
+	function getPoolCapacity() external view returns (uint256) {
 		return totalStake.add(totalBorrow);
 	}
 

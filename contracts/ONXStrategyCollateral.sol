@@ -32,10 +32,10 @@ contract ONXStrategyCollateral is IONXStrategy, BaseShareField, Initializable {
 	address public poolAddress;
 	address public onxFarm;
 	uint256 public lpPoolpid;
-	address public factory;
+	address public owner;
 
 	function strategy_initialize() public initializer {
-		factory = msg.sender;
+		owner = msg.sender;
 	}
 
 	function initialize(
@@ -45,7 +45,7 @@ contract ONXStrategyCollateral is IONXStrategy, BaseShareField, Initializable {
 		address _onxFarm,
 		uint256 _lpPoolpid
 	) public {
-		require(msg.sender == factory, "STRATEGY FORBIDDEN");
+		require(msg.sender == owner, "STRATEGY FORBIDDEN");
 		interestToken = _interestToken;
 		farmToken = _farmToken;
 		poolAddress = _poolAddress;
@@ -94,7 +94,7 @@ contract ONXStrategyCollateral is IONXStrategy, BaseShareField, Initializable {
 	}
 
 	function exit(uint256 amount) external override {
-		require(msg.sender == poolAddress, "INVALID CALLER");
+		require(msg.sender == owner, "INVALID CALLER");
 		IONXFarm(onxFarm).withdraw(lpPoolpid, amount);
 		TransferHelper.safeTransfer(farmToken, msg.sender, amount);
 	}

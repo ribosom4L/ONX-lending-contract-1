@@ -22,7 +22,7 @@ interface IONXPool {
 	function setCollateralStrategy(address _collateralStrategy) external;
 	function supplys(address user) external view returns(uint,uint,uint,uint,uint);
 	function borrows(address user) external view returns(uint,uint,uint,uint,uint);
-	function getTotalAmount() external view returns (uint);
+	function getPoolCapacity() external view returns (uint);
 	function supplyToken() external view returns (address);
 	function interestPerBorrow() external view returns(uint);
 	function interestPerSupply() external view returns(uint);
@@ -259,13 +259,13 @@ contract ONXPlatform is Configable {
 		else withdrawAmount = amountSupply.add(interestAmount).sub(withdrawLiquidationSupplyAmount);
 	}
 
-	function updatePoolParameter(address _lendToken, address _collateralToken, bytes32 _key, uint256 _value) external onlyDeveloper {
+	function updatePoolParameter(address _lendToken, address _collateralToken, bytes32 _key, uint256 _value) external onlyOwner {
 		address pool = IONXFactory(IConfig(config).factory()).getPool(_lendToken, _collateralToken);
 		require(pool != address(0), "POOL NOT EXIST");
 		IConfig(config).setPoolValue(pool, _key, _value);
 	}
 
-	function setCollateralStrategy(address _lendToken, address _collateralToken, address _collateralStrategy) external onlyDeveloper
+	function setCollateralStrategy(address _lendToken, address _collateralToken, address _collateralStrategy) external onlyOwner
 	{
 		address pool = IONXFactory(IConfig(config).factory()).getPool(_lendToken, _collateralToken);
 		require(pool != address(0), "POOL NOT EXIST");

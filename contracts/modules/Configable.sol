@@ -23,9 +23,6 @@ interface IConfig {
 		external
 		view
 		returns (
-			uint256,
-			uint256,
-			uint256,
 			uint256
 		);
 
@@ -33,9 +30,6 @@ interface IConfig {
 		external
 		view
 		returns (
-			uint256,
-			uint256,
-			uint256,
 			uint256
 		);
 

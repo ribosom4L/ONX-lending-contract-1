@@ -45,10 +45,6 @@ contract BaseMintField is Configable {
 	event MintLender(address indexed user, uint256 userAmount);
 	event MintBorrower(address indexed user, uint256 userAmount); // Update reward variables of the given pool to be up-to-date.
 
-	function __base_mint_initialize() public initializer {
-		Configable.__config_initialize();
-	}
-
 	function _update() internal virtual {
 		uint256 reward = _currentReward();
 		totalShare += reward;
