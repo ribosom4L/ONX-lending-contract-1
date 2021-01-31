@@ -114,7 +114,7 @@ describe('deploy', () => {
 
 		////// let bytecodeHash = ethers.utils.keccak256('0x'+ONXBallot.bytecode);
 		////// console.log('hello world', bytecodeHash);
-		let developer = await configContract.connect(walletDeveloper).developer();
+		let developer = await configContract.connect(walletDeveloper).owner();
 		console.log('developer:', developer, walletDeveloper.address)
 		////// await factoryContract.connect(walletDeveloper).changeBallotByteHash(bytecodeHash);
 		// await configContract.connect(walletDeveloper).addMintToken(tokenWETH.address);
@@ -139,7 +139,7 @@ describe('deploy', () => {
 
 		collateralStrategyContract 	= await deployContract(walletDeveloper, ONXStrategyCollateral, []);
 		// FIXME: deployProxy
-		await collateralStrategyContract.connect(walletDeveloper).strategy_initialize()
+		// await collateralStrategyContract.connect(walletDeveloper).strategy_initialize()
 
 		await collateralStrategyContract.connect(walletDeveloper).initialize(tokenContract.address, tokenAETH.address, poolContract.address, farmContract.address, 0);
 		await platformContract.connect(walletDeveloper).setCollateralStrategy(tokenWETH.address, tokenAETH.address, collateralStrategyContract.address);
@@ -496,8 +496,8 @@ describe('deploy', () => {
 
 		// await SupplyStruct(walletMe.address);
 		// await sevenInfo();
-		await(await platformContract.connect(walletDeveloper).updatePoolParameter(
-			tokenWETH.address, tokenAETH.address, ethers.utils.formatBytes32String("POOL_PRICE"), ethers.utils.parseEther('0.02'))).wait();
+		// await(await platformContract.connect(walletDeveloper).updatePoolParameter(
+		// 	tokenWETH.address, tokenAETH.address, ethers.utils.formatBytes32String("POOL_PRICE"), ethers.utils.parseEther('0.02'))).wait();
 		await(await platformContract.connect(walletMe).withdraw(tokenWETH.address, tokenAETH.address, ethers.utils.parseEther('200'))).wait();
 
 		console.log('after withdraw: ',
@@ -563,8 +563,8 @@ describe('deploy', () => {
 		// console.log('wallet team:', convertBigNumber(await tokenWETH.balanceOf(walletTeam.address),1e18))
 		// await SupplyStruct(walletMe.address);
 		// await sevenInfo();
-		await(await platformContract.connect(walletDeveloper).updatePoolParameter(
-			tokenWETH.address, tokenAETH.address, ethers.utils.formatBytes32String("POOL_PRICE"), ethers.utils.parseEther('0.02'))).wait();
+		// await(await platformContract.connect(walletDeveloper).updatePoolParameter(
+		// 	tokenWETH.address, tokenAETH.address, ethers.utils.formatBytes32String("POOL_PRICE"), ethers.utils.parseEther('0.02'))).wait();
 
 		console.log('before withdraw');
 		await platformContract.connect(walletMe).withdraw(tokenWETH.address, tokenAETH.address, ethers.utils.parseEther('200'));

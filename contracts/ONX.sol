@@ -12,7 +12,6 @@ interface IONXStrategy {
 	function withdraw(address user, uint256 amount) external;
 	function liquidation(address user) external;
 	function claim(address user, uint256 amount, uint256 total) external;
-	function exit(uint256 amount) external;
 	function query() external view returns (uint256);
 	function mint() external;
 	function interestToken() external view returns (address);

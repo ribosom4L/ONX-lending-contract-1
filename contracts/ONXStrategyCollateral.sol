@@ -10,7 +10,6 @@ interface IONXStrategy {
     function withdraw(address user, uint256 amount) external;
     function liquidation(address user) external;
     function claim(address user, uint256 amount, uint256 total) external;
-    function exit(uint256 amount) external;
     function query() external view returns (uint256);
     function mint() external;
     function interestToken() external view returns (address);
@@ -34,18 +33,14 @@ contract ONXStrategyCollateral is IONXStrategy, BaseShareField, Initializable {
 	uint256 public lpPoolpid;
 	address public owner;
 
-	function strategy_initialize() public initializer {
-		owner = msg.sender;
-	}
-
 	function initialize(
 		address _interestToken,
 		address _farmToken,
 		address _poolAddress,
 		address _onxFarm,
 		uint256 _lpPoolpid
-	) public {
-		require(msg.sender == owner, "STRATEGY FORBIDDEN");
+	) public initializer {
+		owner = msg.sender;
 		interestToken = _interestToken;
 		farmToken = _farmToken;
 		poolAddress = _poolAddress;
@@ -91,12 +86,6 @@ contract ONXStrategyCollateral is IONXStrategy, BaseShareField, Initializable {
 		uint256 claimAmount = users[msg.sender].rewardEarn.mul(amount).div(total);
 		users[user].rewardEarn = users[user].rewardEarn.add(claimAmount);
 		users[msg.sender].rewardEarn = users[msg.sender].rewardEarn.sub(claimAmount);
-	}
-
-	function exit(uint256 amount) external override {
-		require(msg.sender == owner, "INVALID CALLER");
-		IONXFarm(onxFarm).withdraw(lpPoolpid, amount);
-		TransferHelper.safeTransfer(farmToken, msg.sender, amount);
 	}
 
 	function _currentReward() internal view override returns (uint256) {

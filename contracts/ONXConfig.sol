@@ -23,16 +23,21 @@ contract ONXConfig is Initializable {
 	using SafeMath for uint8;
 	address public owner;
 	address public platform;
-	address public developer;
 	address public factory;
 	address public token;
 	address public WETH;
 	uint256 public lastPriceBlock;
 	uint256 public DAY = 6400;
 	uint256 public HOUR = 267;
+
+	struct ConfigItem {
+			uint min;
+			uint max;
+			uint value;
+	}
 	
-	mapping(address => mapping(bytes32 => uint256)) public poolParams;
-	mapping(bytes32 => uint256) public params;
+	mapping (address => mapping (bytes32 => ConfigItem)) public poolParams;
+	mapping (bytes32 => ConfigItem) public params;
 	mapping(bytes32 => address) public wallets;
 	mapping(address => uint256) public prices;
 	event PriceChange(address token, uint256 value);
@@ -41,7 +46,6 @@ contract ONXConfig is Initializable {
 
 	constructor() public {
 		owner = msg.sender;
-		developer = msg.sender;
 		uint256 id;
 		assembly {
 			id := chainid()
@@ -58,7 +62,7 @@ contract ONXConfig is Initializable {
 		address _token,
 		address _WETH
 	) external initializer {
-		require(msg.sender == owner || msg.sender == developer, "ONX: Config FORBIDDEN");
+		require(msg.sender == owner, "ONX: Config FORBIDDEN");
 		platform = _platform;
 		factory = _factory;
 		token = _token;
@@ -67,13 +71,8 @@ contract ONXConfig is Initializable {
 		initParameter();
 	}
 
-	function changeDeveloper(address _developer) external {
-		require(msg.sender == owner || msg.sender == developer, "ONX: Config FORBIDDEN");
-		developer = _developer;
-	}
-
 	function setWallets(bytes32[] calldata _names, address[] calldata _wallets) external {
-		require(msg.sender == owner || msg.sender == developer, "ONX: ONLY DEVELOPER");
+		require(msg.sender == owner, "ONX: ONLY ONWER");
 		require(_names.length == _wallets.length, "ONX: WALLETS LENGTH MISMATCH");
 		for (uint256 i = 0; i < _names.length; i++) {
 			wallets[_names[i]] = _wallets[i];
@@ -81,49 +80,42 @@ contract ONXConfig is Initializable {
 	}
 
 	function initParameter() internal {
-		require(msg.sender == owner || msg.sender == developer, "ONX: Config FORBIDDEN");
-		_setParams(ConfigNames.STAKE_LOCK_TIME, 0);
-		_setParams(ConfigNames.CHANGE_PRICE_DURATION, 0);
-		_setParams(ConfigNames.CHANGE_PRICE_PERCENT, 20);
-		_setParams(ConfigNames.DEPOSIT_ENABLE, 1);
-		_setParams(ConfigNames.WITHDRAW_ENABLE, 1);
-		_setParams(ConfigNames.BORROW_ENABLE, 1);
-		_setParams(ConfigNames.REPAY_ENABLE, 1);
-		_setParams(ConfigNames.LIQUIDATION_ENABLE, 1);
-		_setParams(ConfigNames.REINVEST_ENABLE, 1);
-		_setParams(ConfigNames.POOL_REWARD_RATE, 5e16);
-		_setParams(ConfigNames.POOL_ARBITRARY_RATE, 9e16);
+			require(msg.sender == owner, "ONX: Config FORBIDDEN");
+			_setParams(ConfigNames.STAKE_LOCK_TIME, 0, 7 * DAY, 0);
+			_setParams(ConfigNames.CHANGE_PRICE_DURATION, 0, 500, 0);
+			_setParams(ConfigNames.CHANGE_PRICE_PERCENT, 1, 100, 20);
+			_setParams(ConfigNames.DEPOSIT_ENABLE, 0, 1, 1);
+			_setParams(ConfigNames.WITHDRAW_ENABLE, 0, 1, 1);
+			_setParams(ConfigNames.BORROW_ENABLE, 0, 1, 1);
+			_setParams(ConfigNames.REPAY_ENABLE, 0, 1, 1);
+			_setParams(ConfigNames.LIQUIDATION_ENABLE, 0, 1, 1);
+			_setParams(ConfigNames.REINVEST_ENABLE, 0, 1, 1);
+			_setParams(ConfigNames.POOL_REWARD_RATE, 0, 1e18, 5e16);
+			_setParams(ConfigNames.POOL_ARBITRARY_RATE, 0, 1e18, 9e16);
 	}
 
 	function initPoolParams(address _pool) external {
 			require(msg.sender == factory, "Config FORBIDDEN");
-			_setPoolParams(_pool, ConfigNames.POOL_BASE_INTERESTS, 2e17);
-			_setPoolParams(_pool, ConfigNames.POOL_MARKET_FRENZY, 2e17);
-			_setPoolParams(_pool, ConfigNames.POOL_PLEDGE_RATE, 6e17);
-			_setPoolParams(_pool, ConfigNames.POOL_LIQUIDATION_RATE, 9e17);
-			_setPoolParams(_pool, ConfigNames.POOL_MINT_POWER, 10000);
-			_setPoolParams(_pool, ConfigNames.POOL_MINT_BORROW_PERCENT, 5000);
+			_setPoolParams(_pool, ConfigNames.POOL_BASE_INTERESTS, 0, 1e18, 2e17);	
+			_setPoolParams(_pool, ConfigNames.POOL_MARKET_FRENZY, 0, 1e18, 2e17);	
+			_setPoolParams(_pool, ConfigNames.POOL_PLEDGE_RATE, 0, 1e18, 6e17);	
+			_setPoolParams(_pool, ConfigNames.POOL_LIQUIDATION_RATE, 0, 1e18, 9e17);	
+			_setPoolParams(_pool, ConfigNames.POOL_MINT_POWER, 0, 100000, 10000);	
+			_setPoolParams(_pool, ConfigNames.POOL_MINT_BORROW_PERCENT, 0, 10000, 5000);
 	}
 
 	function _setPoolValue(address _pool, bytes32 _key, uint256 _value) internal {
-		poolParams[_pool][_key] = _value;
+		poolParams[_pool][_key].value = _value;
 		emit PoolParameterChange(_key, _value);
 	}
 
-	function _setParams(
-		bytes32 _key,
-		uint256 _value
-	) internal {
-		params[_key] = _value;
+	function _setParams(bytes32 _key, uint _min, uint _max, uint _value) internal {
+		params[_key] = ConfigItem(_min, _max, _value);
 		emit ParameterChange(_key, _value);
 	}
 
-	function _setPoolParams(
-		address _pool,
-		bytes32 _key,
-		uint256 _value
-	) internal {
-		poolParams[_pool][_key] = _value;
+	function _setPoolParams(address _pool, bytes32 _key, uint _min, uint _max, uint _value) internal {
+		poolParams[_pool][_key] = ConfigItem(_min, _max, _value);
 		emit PoolParameterChange(_key, _value);
 	}
 
@@ -133,8 +125,8 @@ contract ONXConfig is Initializable {
 	}
 
 	function setTokenPrice(address[] calldata _tokens, uint256[] calldata _prices) external {
-		uint256 duration = params[ConfigNames.CHANGE_PRICE_DURATION];
-		uint256 maxPercent = params[ConfigNames.CHANGE_PRICE_PERCENT];
+		uint256 duration = params[ConfigNames.CHANGE_PRICE_DURATION].value;
+		uint256 maxPercent = params[ConfigNames.CHANGE_PRICE_PERCENT].value;
 		require(block.number >= lastPriceBlock.add(duration), "ONX: Price Duration");
 		require(msg.sender == wallets[bytes32("price")], "ONX: Config FORBIDDEN");
 		require(_tokens.length == _prices.length, "ONX: PRICES LENGTH MISMATCH");
@@ -159,9 +151,13 @@ contract ONXConfig is Initializable {
 	function setValue(bytes32 _key, uint256 _value) external {
 		require(
 			msg.sender == owner,
-			"ONX: ONLY DEVELOPER"
+			"ONX: ONLY OWNER"
 		);
-		params[_key] = _value;
+		require(
+			_value <= params[_key].max && params[_key].min <= _value,
+			"ONX: EXCEEDED RANGE"
+		);
+		params[_key].value = _value;
 		emit ParameterChange(_key, _value);
 	}
 
@@ -170,58 +166,72 @@ contract ONXConfig is Initializable {
 			msg.sender == owner || msg.sender == platform,
 			"ONX: FORBIDDEN"
 		);
+		require(
+			_value <= params[_key].max && params[_key].min <= _value,
+			"ONX: EXCEEDED RANGE"
+		);
 		_setPoolValue(_pool, _key, _value);
 	}
 
 	function getValue(bytes32 _key) external view returns (uint256) {
-		return params[_key];
+		return params[_key].value;
 	}
 
 	function getPoolValue(address _pool, bytes32 _key) external view returns (uint256) {
-		return poolParams[_pool][_key];
+		return poolParams[_pool][_key].value;
 	}
 
 	function setParams(
 		bytes32 _key,
+		uint256 _min,
+		uint256 _max,
 		uint256 _value
 	) external {
 		require(
-			msg.sender == owner || msg.sender == developer,
+			msg.sender == owner,
 			"ONX: FORBIDDEN"
 		);
-		_setParams(_key, _value);
+		_setParams(_key, _min, _max, _value);
 	}
 
 	function setPoolParams(
 		address _pool,
 		bytes32 _key,
+		uint256 _min,
+		uint256 _max,
 		uint256 _value
 	) external {
 		require(
-			msg.sender == owner || msg.sender == developer,
+			msg.sender == owner,
 			"ONX: FORBIDDEN"
 		);
-		_setPoolParams(_pool, _key, _value);
+		_setPoolParams(_pool, _key, _min, _max, _value);
 	}
 
 	function getParams(bytes32 _key)
 		external
 		view
 		returns (
+			uint256,
+			uint256,
 			uint256
 		)
 	{
-		return params[_key];
+		ConfigItem memory item = params[_key];
+		return (item.min, item.max, item.value);
 	}
 
 	function getPoolParams(address _pool, bytes32 _key)
 		external
 		view
 		returns (
+			uint256,
+			uint256,
 			uint256
 		)
 	{
-		return poolParams[_pool][_key];
+		ConfigItem memory item = poolParams[_pool][_key];
+		return (item.min, item.max, item.value);
 	}
 
 	function convertTokenAmount(
