@@ -21,8 +21,6 @@ interface IConfig {
     function wallets(bytes32 key) external view returns(address);
     function setValue(bytes32 key, uint value) external;
     function setPoolValue(address pool, bytes32 key, uint value) external;
-    function setParams(bytes32 _key, uint _min, uint _max, uint _value) external;
-    function setPoolParams(bytes32 _key, uint _min, uint _max, uint _value) external;
     function initPoolParams(address _pool) external;
     function isMintToken(address _token) external returns (bool);
     function prices(address _token) external returns (uint);
