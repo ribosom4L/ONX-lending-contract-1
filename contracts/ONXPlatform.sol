@@ -27,7 +27,7 @@ interface IONXPool {
 	function interestPerBorrow() external view returns(uint);
 	function interestPerSupply() external view returns(uint);
 	function lastInterestUpdate() external view returns(uint);
-	function getInterests() external view returns(uint);
+	function getInterests() external view returns(uint, uint);
 	function totalBorrow() external view returns(uint);
 	function remainSupply() external view returns(uint);
 	function liquidationPerSupply() external view returns(uint);
@@ -44,6 +44,7 @@ interface IONXFactory {
 contract ONXPlatform is Configable {
 	using SafeMath for uint256;
 	uint256 private unlocked;
+	address payoutAddress;
 	modifier lock() {
 		require(unlocked == 1, "Locked");
 		unlocked = 0;
@@ -53,9 +54,10 @@ contract ONXPlatform is Configable {
 
 	receive() external payable {}
 
-	function initialize() external initializer {
+	function initialize(address _payoutAddress) external initializer {
 		Configable.__config_initialize();
 		unlocked = 1;
+		payoutAddress = _payoutAddress;
 	}
 
 	function deposit(address _lendToken, address _collateralToken, uint256 _amountDeposit) external lock {
@@ -126,7 +128,10 @@ contract ONXPlatform is Configable {
 			TransferHelper.safeTransferFrom(_lendToken, msg.sender, pool, repayAmount);
 		}
 
-		IONXPool(pool).repay(_amountCollateral, msg.sender);
+		(, uint256 payoutInterest) = IONXPool(pool).repay(_amountCollateral, msg.sender);
+		if (payoutInterest > 0) {
+			_innerTransfer(_lendToken, payoutAddress, payoutInterest);
+		}
 		_innerTransfer(_collateralToken, msg.sender, _amountCollateral);
 	}
 
@@ -143,7 +148,10 @@ contract ONXPlatform is Configable {
 			TransferHelper.safeTransfer(_lendToken, pool, repayAmount);
 		}
 
-		IONXPool(pool).repay(_amountCollateral, msg.sender);
+		(, uint256 payoutInterest) = IONXPool(pool).repay(_amountCollateral, msg.sender);
+		if (payoutInterest > 0) {
+			_innerTransfer(_lendToken, payoutAddress, payoutInterest);
+		}
 		_innerTransfer(_collateralToken, msg.sender, _amountCollateral);
 		if (msg.value > repayAmount) TransferHelper.safeTransferETH(msg.sender, msg.value.sub(repayAmount));
 	}
@@ -181,14 +189,15 @@ contract ONXPlatform is Configable {
 
 		(, uint256 borrowAmountCollateral, uint256 interestSettled, uint256 amountBorrow, uint256 borrowInterests) =
 			IONXPool(pool).borrows(from);
+		(, uint256 borrowInterestPerBlock) = IONXPool(pool).getInterests();
 		uint256 _interestPerBorrow =
 			IONXPool(pool).interestPerBorrow().add(
-				IONXPool(pool).getInterests().mul(block.number - IONXPool(pool).lastInterestUpdate())
+				borrowInterestPerBlock.mul(block.number - IONXPool(pool).lastInterestUpdate())
 			);
-		uint256 _totalInterest =
-			borrowInterests.add(_interestPerBorrow.mul(amountBorrow).div(1e18).sub(interestSettled));
 		uint256 repayInterest =
-			borrowAmountCollateral == 0 ? 0 : _totalInterest.mul(amountCollateral).div(borrowAmountCollateral);
+			borrowAmountCollateral == 0 
+			? 0 
+			: borrowInterests.add(_interestPerBorrow.mul(amountBorrow).div(1e18).sub(interestSettled)).mul(amountCollateral).div(borrowAmountCollateral);
 		repayAmount = borrowAmountCollateral == 0
 			? 0
 			: amountBorrow.mul(amountCollateral).div(borrowAmountCollateral).add(repayInterest);
@@ -221,14 +230,14 @@ contract ONXPlatform is Configable {
 		uint256 totalBorrow = IONXPool(pool).totalBorrow();
 		uint256 totalSupply = totalBorrow + IONXPool(pool).remainSupply();
 		(uint256 amountSupply, uint256 interestSettled, , uint256 interests, ) = IONXPool(pool).supplys(from);
+		(uint256 supplyInterestPerBlock,) = IONXPool(pool).getInterests();
 		uint256 _interestPerSupply =
 			IONXPool(pool).interestPerSupply().add(
 				totalSupply == 0
 					? 0
-					: IONXPool(pool)
-						.getInterests()
+					: supplyInterestPerBlock
 						.mul(block.number - IONXPool(pool).lastInterestUpdate())
-						.mul(totalBorrow)
+						.mul(IONXPool(pool).totalBorrow())
 						.div(totalSupply)
 			);
 		interestAmount = interests.add(_interestPerSupply.mul(amountSupply).div(1e18).sub(interestSettled));

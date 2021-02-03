@@ -67,6 +67,8 @@ contract ONXPool is BaseMintField, Configurable {
 
 	address public collateralStrategy;
 
+	uint256 public payoutRatio;
+
 	event Deposit(address indexed _user, uint256 _amount, uint256 _collateralAmount);
 	event Withdraw(address indexed _user, uint256 _supplyAmount, uint256 _collateralAmount, uint256 _interestAmount);
 	event Borrow(address indexed _user, uint256 _supplyAmount, uint256 _collateralAmount);
@@ -97,25 +99,34 @@ contract ONXPool is BaseMintField, Configurable {
 		lastInterestUpdate = block.number;
 	}
 
-	function updateInterests() internal {
+	function updateInterests(bool isPayout) internal {
 		uint256 totalSupply = totalBorrow + remainSupply;
-		uint256 interestPerBlock = getInterests();
+		(uint256 supplyInterestPerBlock, uint256 borrowInterestPerBlock) = getInterests();
 
 		interestPerSupply = interestPerSupply.add(
 			totalSupply == 0
 			? 0
-			: interestPerBlock.mul(block.number - lastInterestUpdate).mul(totalBorrow).div(totalSupply)
+			: supplyInterestPerBlock.mul(block.number - lastInterestUpdate).mul(totalBorrow).div(totalSupply)
 		);
-		interestPerBorrow = interestPerBorrow.add(interestPerBlock.mul(block.number - lastInterestUpdate));
+		interestPerBorrow = interestPerBorrow.add(borrowInterestPerBlock.mul(block.number - lastInterestUpdate));
 		lastInterestUpdate = block.number;
+
+		if (isPayout == true) {
+			payoutRatio = borrowInterestPerBlock == 0
+				? 0
+				: (borrowInterestPerBlock.sub(supplyInterestPerBlock)).mul(1e18).div(borrowInterestPerBlock);
+		}
 	}
 
-	function getInterests() public view returns (uint256 interestPerBlock) {
+	function getInterests() public view returns (uint256 supplyInterestPerBlock, uint256 borrowInterestPerBlock) {
 		uint256 totalSupply = totalBorrow + remainSupply;
 		uint256 baseInterests = IConfig(config).getPoolValue(address(this), ConfigNames.POOL_BASE_INTERESTS);
 		uint256 marketFrenzy = IConfig(config).getPoolValue(address(this), ConfigNames.POOL_MARKET_FRENZY);
 		uint256 aDay = IConfig(config).DAY();
-		interestPerBlock = totalSupply == 0
+		supplyInterestPerBlock = totalSupply == 0
+		? 0
+		: totalBorrow.mul(marketFrenzy).div(totalSupply).div(365 * aDay);
+		borrowInterestPerBlock = totalSupply == 0
 		? 0
 		: baseInterests.add(totalBorrow.mul(marketFrenzy).div(totalSupply)).div(365 * aDay);
 	}
@@ -130,7 +141,7 @@ contract ONXPool is BaseMintField, Configurable {
 		uint256 amountIn = IERC20(supplyToken).balanceOf(address(this)).sub(remainSupply);
 		require(amountIn >= amountDeposit, "ONX: INVALID AMOUNT");
 
-		updateInterests();
+		updateInterests(false);
 
 		uint256 addLiquidation =
 		liquidationPerSupply.mul(getConfig(_amountSupply_SS, from)).div(1e18).sub(getConfig(_liquidationSettled_SS, from));
@@ -153,7 +164,7 @@ contract ONXPool is BaseMintField, Configurable {
 	}
 
 	function reinvest(address from) public onlyPlatform returns (uint256 reinvestAmount) {
-		updateInterests();
+		updateInterests(false);
 
 		uint256 addLiquidation =
 		liquidationPerSupply.mul(getConfig(_amountSupply_SS, from)).div(1e18).sub(getConfig(_liquidationSettled_SS, from));
@@ -195,7 +206,7 @@ contract ONXPool is BaseMintField, Configurable {
 		require(amountWithdraw > 0, "ONX: INVALID AMOUNT TO WITHDRAW");
 		require(amountWithdraw <= getConfig(_amountSupply_SS, from), "ONX: NOT ENOUGH BALANCE");
 
-		updateInterests();
+		updateInterests(false);
 
 		uint256 addLiquidation =
 		liquidationPerSupply.mul(getConfig(_amountSupply_SS, from)).div(1e18).sub(getConfig(_liquidationSettled_SS, from));
@@ -268,7 +279,7 @@ contract ONXPool is BaseMintField, Configurable {
 
 		require(amountCollateral <= amountIn , "AAAA: INVALID AMOUNT");
 
-		updateInterests();
+		updateInterests(false);
 
 		uint256 pledgeRate = IConfig(config).getPoolValue(address(this), ConfigNames.POOL_PLEDGE_RATE);
 		uint256 maxAmount =
@@ -318,21 +329,26 @@ contract ONXPool is BaseMintField, Configurable {
 	function repay(uint256 amountCollateral, address from)
 	public
 	onlyPlatform
-	returns (uint256 repayAmount, uint256 repayInterest)
+	returns (uint256 repayAmount, uint256 payoutInterest)
 	{
 		require(amountCollateral <= getConfig(_amountCollateral_BS, from), "ONX: NOT ENOUGH COLLATERAL");
 		require(amountCollateral > 0, "ONX: INVALID AMOUNT TO REPAY");
 
 		uint256 amountIn = IERC20(supplyToken).balanceOf(address(this)).sub(remainSupply);
 
-		updateInterests();
+		updateInterests(true);
 
 		_setConfig(_interests_BS, from, getConfig(_interests_BS, from).add(
 				interestPerBorrow.mul(getConfig(_amountBorrow_BS, from)).div(1e18).sub(getConfig(_interestSettled_BS, from))
 			));
 
 		repayAmount = getConfig(_amountBorrow_BS, from).mul(amountCollateral).div(getConfig(_amountCollateral_BS, from));
-		repayInterest = getConfig(_interests_BS, from).mul(amountCollateral).div(getConfig(_amountCollateral_BS, from));
+		uint256 repayInterest = getConfig(_interests_BS, from).mul(amountCollateral).div(getConfig(_amountCollateral_BS, from));
+
+		payoutInterest = 0;
+		if (supplyToken == IConfig(config).WETH()) {
+			payoutInterest = repayInterest.mul(payoutRatio).div(1e18);
+		}		
 
 		totalPledge = totalPledge.sub(amountCollateral);
 		totalBorrow = totalBorrow.sub(repayAmount);
@@ -344,7 +360,7 @@ contract ONXPool is BaseMintField, Configurable {
 			? 0
 			: interestPerBorrow.mul(getConfig(_amountBorrow_BS, from)).div(1e18));
 
-		remainSupply = remainSupply.add(repayAmount.add(repayInterest));
+		remainSupply = remainSupply.add(repayAmount.add(repayInterest.sub(payoutInterest)));
 
 		if(collateralStrategy != address(0))
 		{
@@ -352,7 +368,10 @@ contract ONXPool is BaseMintField, Configurable {
 		}
 		TransferHelper.safeTransfer(collateralToken, msg.sender, amountCollateral);
 		require(amountIn >= repayAmount.add(repayInterest), "ONX: INVALID AMOUNT TO REPAY");
-		// TransferHelper.safeTransferFrom(supplyToken, from, address(this), repayAmount.add(repayInterest));
+
+		if (payoutInterest > 0) {
+			TransferHelper.safeTransfer(supplyToken, msg.sender, payoutInterest);
+		}
 
 		if (repayAmount > 0) {
 			_decreaseBorrowerProductivity(from, repayAmount);
@@ -364,7 +383,7 @@ contract ONXPool is BaseMintField, Configurable {
 	function liquidation(address _user, address from) public onlyPlatform returns (uint256 borrowAmount) {
 		require(getConfig(_amountSupply_SS, from) > 0, "ONX: ONLY SUPPLIER");
 
-		updateInterests();
+		updateInterests(false);
 
 		_setConfig(_interests_BS, _user, getConfig(_interests_BS, _user).add(
 				interestPerBorrow.mul(getConfig(_amountBorrow_BS, _user)).div(1e18).sub(getConfig(_interestSettled_BS, _user))
@@ -462,8 +481,6 @@ contract ONXPool is BaseMintField, Configurable {
 		liquidationAmount = getConfig(_liquidationAmount_LS, id);
 		timestamp = getConfig(_timestamp_LS, id);
 	}
-
-
 
 	function mint() external {
 		_mintLender();
