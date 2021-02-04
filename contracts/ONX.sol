@@ -123,10 +123,15 @@ contract ONXPool is BaseMintField, Configurable {
 		uint256 baseInterests = IConfig(config).getPoolValue(address(this), ConfigNames.POOL_BASE_INTERESTS);
 		uint256 marketFrenzy = IConfig(config).getPoolValue(address(this), ConfigNames.POOL_MARKET_FRENZY);
 		uint256 aDay = IConfig(config).DAY();
-		supplyInterestPerBlock = totalSupply == 0
-		? 0
-		: totalBorrow.mul(marketFrenzy).div(totalSupply).div(365 * aDay);
 		borrowInterestPerBlock = totalSupply == 0
+		? 0
+		: baseInterests.add(totalBorrow.mul(marketFrenzy).div(totalSupply)).div(365 * aDay);
+
+		if (supplyToken == IConfig(config).WETH()) {
+			baseInterests = 0;
+		}
+		
+		supplyInterestPerBlock = totalSupply == 0
 		? 0
 		: baseInterests.add(totalBorrow.mul(marketFrenzy).div(totalSupply)).div(365 * aDay);
 	}
