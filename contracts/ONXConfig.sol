@@ -181,6 +181,16 @@ contract ONXConfig is Initializable {
 		return poolParams[_pool][_key].value;
 	}
 
+	function setParams(bytes32 _key, uint _min, uint _max, uint _value) external {
+			require(msg.sender == owner || msg.sender == platform, "ONX: FORBIDDEN");
+			_setParams(_key, _min, _max, _value);
+	}
+
+	function setPoolParams(address _pool, bytes32 _key, uint _min, uint _max, uint _value) external {
+			require(msg.sender == owner || msg.sender == platform, "ONX: FORBIDDEN");
+			_setPoolParams(_pool, _key, _min, _max, _value);
+	}
+
 	function getParams(bytes32 _key)
 		external
 		view

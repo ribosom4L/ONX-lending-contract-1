@@ -28,20 +28,22 @@ let STRATEGY_ADDRESS = ""
 let PAYOUT_ADDRESS = ""
 
 const loadJsonFile = require('load-json-file');
-const keys = loadJsonFile.sync('./keys.json');
+let keys = loadJsonFile.sync('./keys.json');
 const network = keys.network;
+const { infuraKey, deployer, privateKey, payout } = keys.networks[network];
+const url = (network === 'hardhat' ? `http://127.0.0.1:8545` : `https://${network}.infura.io/v3/${infuraKey}`)
 
-let config = {
-    "url": `http://127.0.0.1:8545`,
-    "pk": "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+const config = {
+    "url": url,
+    "pk": privateKey,
     "gasPrice": "80",
-    "walletDev": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
-    "walletTeam": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
-    "walletSpare": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
-    "walletPrice": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
-    "walletPayout": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
-    "users":["0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"],
-    "weth_address": "0xE95A203B1a91a908F9B9CE46459d101078c2c3cb"
+    "walletDev": deployer,
+    "walletTeam": deployer,
+    "walletSpare": deployer,
+    "walletPrice": deployer,
+    "walletPayout": payout,
+    "users":[deployer],
+    "weth_address": deployer,
 }
 
 WETH_ADDRESS = config.weth_address
