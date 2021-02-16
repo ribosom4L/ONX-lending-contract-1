@@ -12,7 +12,9 @@ const keys = loadJsonFile.sync('./keys.json');
 module.exports = {
   defaultNetwork: 'hardhat',
   networks: {
-    hardhat: {},
+    hardhat: {
+      privateKey: [keys.networks.ropsten.privateKey]
+    },
     ropsten: {
       url: `https://ropsten.infura.io/v3/${keys.networks.ropsten.infuraKey}`,
       accounts: [keys.networks.ropsten.privateKey],
