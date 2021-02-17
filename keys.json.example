@@ -1,16 +1,23 @@
 {
-    "networks": {
-        "mainnet": {
-            "infuraKey": "",
-            "privateKey": ""
-        },
-        "ropsten": {
-            "infuraKey": "",
-            "privateKey": ""
-        },
-         "goerli": {
-             "infuraKey": "",
-             "privateKey": ""
-         }
+  "network": "hardhat",
+  "networks": {
+      "mainnet": {
+          "infuraKey": "",
+          "deployer": "",
+          "payout": "",
+          "privateKey": ""
+      },
+      "ropsten": {
+          "infuraKey": "",
+          "deployer": "",
+          "payout": "",
+          "privateKey": ""
+      },
+      "hardhat": {
+        "infuraKey": "",
+        "deployer": "",
+        "payout": "",
+        "privateKey": ""
     }
+  }
 }
