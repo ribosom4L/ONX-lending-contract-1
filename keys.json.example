@@ -1,23 +1,25 @@
 {
-  "network": "hardhat",
-  "networks": {
-      "mainnet": {
-          "infuraKey": "",
-          "deployer": "",
-          "payout": "",
-          "privateKey": ""
-      },
-      "ropsten": {
-          "infuraKey": "",
-          "deployer": "",
-          "payout": "",
-          "privateKey": ""
-      },
-      "hardhat": {
-        "infuraKey": "",
-        "deployer": "",
-        "payout": "",
-        "privateKey": ""
+    "networks": {
+        "mainnet": {
+            "infuraKey": "",
+            "privateKey": "",
+            "deployer": "",
+            "payout": "",
+            "weth": ""
+        },
+        "ropsten": {
+            "infuraKey": "",
+            "privateKey": "",
+            "deployer": "",
+            "payout": "",
+            "weth": ""
+        },
+        "hardhat": {
+            "infuraKey": "",
+            "privateKey": "",
+            "deployer": "",
+            "payout": "",
+            "weth": ""
+        }
     }
-  }
 }
