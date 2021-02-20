@@ -9,7 +9,7 @@ const ONXConfig = require("../artifacts/contracts/ONXConfig.sol/ONXConfig.json")
 const ONXPlatform = require("../artifacts/contracts/ONXPlatform.sol/ONXPlatform.json")
 const ONXPool = require("../artifacts/contracts/ONX.sol/ONXPool.json")
 const ONXFactory = require("../artifacts/contracts/ONXFactory.sol/ONXFactory.json")
-const ONXStrategyCollateral = require("../artifacts/contracts/ONXStrategyCollateral.sol/ONXStrategyCollateral.json")
+const ONXStrategy = require("../artifacts/contracts/ONXStrategy.sol/ONXStrategy.json")
 const ONXTestFarm = require("../artifacts/contracts/test/ONXTestFarm.sol/ONXTestFarm.json")
 const ONXTestToken = require("../artifacts/contracts/test/ONXTestToken.sol/ONXTestToken.json")
 
@@ -220,8 +220,8 @@ async function deploy() {
 
   // ONX strategy contract
   factory = new ethers.ContractFactory(
-    ONXStrategyCollateral.abi,
-    ONXStrategyCollateral.bytecode,
+    ONXStrategy.abi,
+    ONXStrategy.bytecode,
     signer
   )
   ins = await factory.deploy()
@@ -232,7 +232,7 @@ async function deploy() {
   // onx strategy initialize
   ins = new ethers.Contract(
     STRATEGY_ADDRESS,
-    ONXStrategyCollateral.abi,
+    ONXStrategy.abi,
     signer
   )
   tx = await ins.initialize(ONX_ADDRESS, COLLATERAL_TOKEN_ADDRESS, AETH_POOL_ADDRESS, ONXFARM_ADDRESS, 0)

@@ -5,9 +5,14 @@ import "./modules/ConfigNames.sol";
 import "./libraries/SafeMath.sol";
 import "./libraries/TransferHelper.sol";
 
+interface IONXSupplyToken {
+	function mint(address account, uint256 amount) external;
+	function burn(address account, uint256 amount) external;
+	function approve(address spender, uint256 amount) external;
+}
+
 interface IWETH {
 	function deposit() external payable;
-
 	function withdraw(uint256) external;
 }
 
@@ -19,7 +24,7 @@ interface IONXPool {
 	function liquidation(address _user, address _from) external returns (uint);
 	function reinvest(address _from) external returns(uint);
 
-	function setCollateralStrategy(address _collateralStrategy) external;
+	function setCollateralStrategy(address _collateralStrategy, address _supplyStrategy) external;
 	function supplys(address user) external view returns(uint,uint,uint,uint,uint);
 	function borrows(address user) external view returns(uint,uint,uint,uint,uint);
 	function getPoolCapacity() external view returns (uint);
@@ -44,7 +49,8 @@ interface IONXFactory {
 contract ONXPlatform is Configable {
 	using SafeMath for uint256;
 	uint256 private unlocked;
-	address payoutAddress;
+	address public payoutAddress;
+	address public onxSupplyToken;
 	modifier lock() {
 		require(unlocked == 1, "Locked");
 		unlocked = 0;
@@ -54,10 +60,11 @@ contract ONXPlatform is Configable {
 
 	receive() external payable {}
 
-	function initialize(address _payoutAddress) external initializer {
+	function initialize(address _payoutAddress, address _onxSupplyToken) external initializer {
 		Configable.__config_initialize();
 		unlocked = 1;
 		payoutAddress = _payoutAddress;
+		onxSupplyToken = _onxSupplyToken;
 	}
 
 	function deposit(address _lendToken, address _collateralToken, uint256 _amountDeposit) external lock {
@@ -65,6 +72,11 @@ contract ONXPlatform is Configable {
 		address pool = IONXFactory(IConfig(config).factory()).getPool(_lendToken, _collateralToken);
 		require(pool != address(0), "POOL NOT EXIST");
 		TransferHelper.safeTransferFrom(_lendToken, msg.sender, pool, _amountDeposit);
+		if(onxSupplyToken != address(0) && _amountDeposit > 0)
+		{
+			IONXSupplyToken(onxSupplyToken).mint(address(this), _amountDeposit);
+			TransferHelper.safeTransfer(onxSupplyToken, pool, _amountDeposit);
+		}
 		IONXPool(pool).deposit(_amountDeposit, msg.sender);
 	}
 
@@ -75,6 +87,11 @@ contract ONXPlatform is Configable {
 		require(pool != address(0), "POOL NOT EXIST");
 		IWETH(IConfig(config).WETH()).deposit{value: msg.value}();
 		TransferHelper.safeTransfer(_lendToken, pool, msg.value);
+		if(onxSupplyToken != address(0) && msg.value > 0)
+		{
+			IONXSupplyToken(onxSupplyToken).mint(address(this), msg.value);
+			TransferHelper.safeTransfer(onxSupplyToken, pool, msg.value);
+		}
 		IONXPool(pool).deposit(msg.value, msg.sender);
 	}
 
@@ -84,7 +101,12 @@ contract ONXPlatform is Configable {
 		require(pool != address(0), "POOL NOT EXIST");
 		(uint256 withdrawSupplyAmount, uint256 withdrawLiquidationAmount) =
 			IONXPool(pool).withdraw(_amountWithdraw, msg.sender);
-		if (withdrawSupplyAmount > 0) _innerTransfer(_lendToken, msg.sender, withdrawSupplyAmount);
+		if (withdrawSupplyAmount > 0) {
+			_innerTransfer(_lendToken, msg.sender, withdrawSupplyAmount);
+			if(onxSupplyToken != address(0) && _amountWithdraw > 0) {
+				IONXSupplyToken(onxSupplyToken).burn(address(this), _amountWithdraw);
+			}
+		}
 		if (withdrawLiquidationAmount > 0) _innerTransfer(_collateralToken, msg.sender, withdrawLiquidationAmount);
 	}
 
@@ -274,10 +296,10 @@ contract ONXPlatform is Configable {
 		IConfig(config).setPoolValue(pool, _key, _value);
 	}
 
-	function setCollateralStrategy(address _lendToken, address _collateralToken, address _collateralStrategy) external onlyOwner
+	function setCollateralStrategy(address _lendToken, address _collateralToken, address _collateralStrategy, address _supplyStrategy) external onlyOwner
 	{
 		address pool = IONXFactory(IConfig(config).factory()).getPool(_lendToken, _collateralToken);
 		require(pool != address(0), "POOL NOT EXIST");
-		IONXPool(pool).setCollateralStrategy(_collateralStrategy);
+		IONXPool(pool).setCollateralStrategy(_collateralStrategy, _supplyStrategy);
 	}
 }

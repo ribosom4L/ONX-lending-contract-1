@@ -13,7 +13,8 @@ const ONXConfig = require("../artifacts/contracts/ONXConfig.sol/ONXConfig.json")
 const ONXPlatform = require("../artifacts/contracts/ONXPlatform.sol/ONXPlatform.json")
 const ONX = require("../artifacts/contracts/ONX.sol/ONXPool.json")
 const ONXFactory = require("../artifacts/contracts/ONXFactory.sol/ONXFactory.json")
-const ONXStrategyCollateral = require("../artifacts/contracts/ONXStrategyCollateral.sol/ONXStrategyCollateral.json")
+const ONXStrategy = require("../artifacts/contracts/ONXStrategy.sol/ONXStrategy.json")
+const ONXSupplyToken = require("../artifacts/contracts/ONXSupplyToken.sol/ONXSupplyToken.json")
 const ONXTestFarm = require("../artifacts/contracts/test/ONXTestFarm.sol/ONXTestFarm.json")
 const ONXTestToken = require("../artifacts/contracts/test/ONXTestToken.sol/ONXTestToken.json")
 const BN = require('bignumber.js')
@@ -38,6 +39,8 @@ describe('deploy', () => {
 	let tokenAETH;
 	let farmContract;
 	let collateralStrategyContract;
+	let supplyStrategyContract;
+	let onxSupplyTokenContract;
 	////// let poolContract;
 	let tx;
 	let receipt;
@@ -64,14 +67,20 @@ describe('deploy', () => {
 		tokenContract = await deployContract(walletDeveloper, ONXTestToken, []);
 		tokenWETH = await deployContract(walletDeveloper, WETH);
 		tokenAETH = await deployContract(walletDeveloper, AETH);
+		onxSupplyTokenContract = await deployContract(walletDeveloper, ONXSupplyToken);
 		farmContract = await deployContract(walletDeveloper, ONXTestFarm, [tokenContract.address, wallet1.address, wallet2.address], { gasLimit: 7000000 });
 		////// rewardToken = await deployContract(walletDeveloper, SushiToken);
 		////// masterChef  = await deployContract(walletDeveloper, MasterChef,
 		////// 	[rewardToken.address, walletDeveloper.address, ethers.utils.parseEther('1'), 0, 20]);
+		console.log('before onxSupplyToken owner:', (await onxSupplyTokenContract.onwer()));
+		await onxSupplyTokenContract.transferOwnership(platformContract.address);
+		console.log('after onxSupplyToken owner:', (await onxSupplyTokenContract.onwer()));
 
 		await (await farmContract.connect(walletDeveloper).add(20, tokenAETH.address, false)).wait();
+		await (await farmContract.connect(walletDeveloper).add(20, onxSupplyTokenContract.address, false)).wait();
 		await tokenContract.transferOwnership(farmContract.address);
 		console.log('onxFarm 0 lp:', (await farmContract.poolInfo(0)).token);
+		console.log('onxFarm 1 lp:', (await farmContract.poolInfo(1)).token);
 
 		await getBlockNumber();
 
@@ -137,12 +146,14 @@ describe('deploy', () => {
 		let pool = await factoryContract.connect(walletDeveloper).getPool(tokenWETH.address, tokenAETH.address);
 		// poolContract  = new Contract(pool, ONX.abi, provider).connect(walletMe);
 
-		collateralStrategyContract = await deployContract(walletDeveloper, ONXStrategyCollateral, []);
+		collateralStrategyContract = await deployContract(walletDeveloper, ONXStrategy, []);
+		supplyStrategyContract = await deployContract(walletDeveloper, ONXStrategy, []);
 		// FIXME: deployProxy
 		// await collateralStrategyContract.connect(walletDeveloper).strategy_initialize()
 
 		await collateralStrategyContract.connect(walletDeveloper).initialize(tokenContract.address, tokenAETH.address, poolContract.address, farmContract.address, 0);
-		await platformContract.connect(walletDeveloper).setCollateralStrategy(tokenWETH.address, tokenAETH.address, collateralStrategyContract.address);
+		await supplyStrategyContract.connect(walletDeveloper).initialize(tokenContract.address, onxSupplyTokenContract.address, poolContract.address, farmContract.address, 1);
+		await platformContract.connect(walletDeveloper).setCollateralStrategy(tokenWETH.address, tokenAETH.address, collateralStrategyContract.address, supplyStrategyContract.address);
 		////// strategy = await deployContract(walletDeveloper, SLPStrategy, []);
 		////// await strategy.connect(walletDeveloper).initialize(rewardToken.address, tokenAETH.address, poolContract.address, masterChef.address, 0);
 
