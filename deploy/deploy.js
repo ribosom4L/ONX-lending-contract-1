@@ -9,7 +9,8 @@ const ONXConfig = require("../artifacts/contracts/ONXConfig.sol/ONXConfig.json")
 const ONXPlatform = require("../artifacts/contracts/ONXPlatform.sol/ONXPlatform.json")
 const ONXPool = require("../artifacts/contracts/ONX.sol/ONXPool.json")
 const ONXFactory = require("../artifacts/contracts/ONXFactory.sol/ONXFactory.json")
-const ONXStrategyCollateral = require("../artifacts/contracts/ONXStrategyCollateral.sol/ONXStrategyCollateral.json")
+const ONXStrategy = require("../artifacts/contracts/ONXStrategy.sol/ONXStrategy.json")
+const ONXSupplyToken = require("../artifacts/contracts/ONXSupplyToken.sol/ONXSupplyToken.json")
 const ONXTestFarm = require("../artifacts/contracts/test/ONXTestFarm.sol/ONXTestFarm.json")
 const ONXTestToken = require("../artifacts/contracts/test/ONXTestToken.sol/ONXTestToken.json")
 
@@ -22,9 +23,11 @@ let PLATFORM_ADDRESS = ""
 let CONFIG_ADDRESS = ""
 let AETH_POOL_ADDRESS = ""
 let FACTORY_ADDRESS = ""
+let ONX_SUPPLY_TOKEN_ADDRESS = ""
 
 let ONXFARM_ADDRESS = ""
-let STRATEGY_ADDRESS = ""
+let COLLATERAL_STRATEGY_ADDRESS = ""
+let SUPPLY_STRATEGY_ADDRESS = ""
 
 const loadJsonFile = require('load-json-file');
 let keys = loadJsonFile.sync('./keys.json');
@@ -128,6 +131,24 @@ async function deploy() {
   COLLATERAL_TOKEN_ADDRESS = AETH_ADDRESS
   LEND_TOKEN_ADDRESS = WETH_ADDRESS
 
+  /********************************** */
+
+  // ONX Supply Token
+  factory = await ethers.getContractFactory("ONXSupplyToken")
+  ins = await factory.deploy()
+  await waitForMint(ins.deployTransaction.hash)
+  ONX_SUPPLY_TOKEN_ADDRESS = ins.address
+
+  // ONX Farm add onx supply token pool # should remove on mainnet
+  ins = new ethers.Contract(
+    ONXFARM_ADDRESS,
+    ONXTestFarm.abi,
+    signer
+  )
+  tx = await ins.add(20, ONX_SUPPLY_TOKEN_ADDRESS, false)
+  await waitForMint(tx.hash)
+  console.log('ONX SUPPLY TOKEN POOL added in onx farm')
+
   // CONFIG
   factory = await ethers.getContractFactory("ONXConfig")
 
@@ -148,7 +169,7 @@ async function deploy() {
   factory = await ethers.getContractFactory("ONXPlatform")
 
   // ins = await upgrades.deployProxy(factory, [])
-  ins = await upgrades.deployProxy(factory, [PAYOUT_ADDRESS])
+  ins = await upgrades.deployProxy(factory, [PAYOUT_ADDRESS, ONX_SUPPLY_TOKEN_ADDRESS])
   await ins.deployed()
 
   await waitForMint(ins.deployTransaction.hash)
@@ -156,6 +177,17 @@ async function deploy() {
   PLATFORM_ADDRESS = ins.address
   console.log('PLATFORM_ADDRESS', PLATFORM_ADDRESS)
 
+  // ONX Supply token transferownership
+  ins = new ethers.Contract(
+    ONXFARM_ADDRESS,
+    ONXSupplyToken.abi,
+    signer
+  )
+  tx = await ins.transferOwnership(PLATFORM_ADDRESS)
+  await waitForMint(tx.hash)
+  console.log('ONX Supply Token transferownershipped')
+
+  // platform config
   ins = new ethers.Contract(
     PLATFORM_ADDRESS,
     ONXFactory.abi,
@@ -218,26 +250,47 @@ async function deploy() {
   await waitForMint(tx.hash)
   console.log('ONXFactory created pool')
 
-  // ONX strategy contract
+  // ONX collateral strategy contract
   factory = new ethers.ContractFactory(
-    ONXStrategyCollateral.abi,
-    ONXStrategyCollateral.bytecode,
+    ONXStrategy.abi,
+    ONXStrategy.bytecode,
     signer
   )
   ins = await factory.deploy()
   await waitForMint(ins.deployTransaction.hash)
-  STRATEGY_ADDRESS = ins.address
-  console.log('STRATEGY_ADDRESS >> ', STRATEGY_ADDRESS)
+  COLLATERAL_STRATEGY_ADDRESS  = ins.address
+  console.log('COLLATERAL_STRATEGY_ADDRESS  >> ', COLLATERAL_STRATEGY_ADDRESS )
 
   // onx strategy initialize
   ins = new ethers.Contract(
-    STRATEGY_ADDRESS,
-    ONXStrategyCollateral.abi,
+    COLLATERAL_STRATEGY_ADDRESS,
+    ONXStrategy.abi,
     signer
   )
   tx = await ins.initialize(ONX_ADDRESS, COLLATERAL_TOKEN_ADDRESS, AETH_POOL_ADDRESS, ONXFARM_ADDRESS, 0)
   await waitForMint(tx.hash)
-  console.log('ONX strategy initialized')
+  console.log('ONX collateral strategy initialized')
+
+  // ONX supply strategy contract
+  factory = new ethers.ContractFactory(
+    ONXStrategy.abi,
+    ONXStrategy.bytecode,
+    signer
+  )
+  ins = await factory.deploy()
+  await waitForMint(ins.deployTransaction.hash)
+  SUPPLY_STRATEGY_ADDRESS  = ins.address
+  console.log('SUPPLY_STRATEGY_ADDRESS  >> ', SUPPLY_STRATEGY_ADDRESS )
+
+  // onx supply strategy initialize
+  ins = new ethers.Contract(
+    SUPPLY_STRATEGY_ADDRESS,
+    ONXStrategy.abi,
+    signer
+  )
+  tx = await ins.initialize(ONX_ADDRESS, ONX_SUPPLY_TOKEN_ADDRESS, AETH_POOL_ADDRESS, ONXFARM_ADDRESS, 1)
+  await waitForMint(tx.hash)
+  console.log('ONX supply strategy initialized')
 
   // ONX Platform set strategy
   ins = new ethers.Contract(
@@ -245,7 +298,7 @@ async function deploy() {
     ONXPlatform.abi,
     signer
   )
-  tx = await ins.setCollateralStrategy(LEND_TOKEN_ADDRESS, COLLATERAL_TOKEN_ADDRESS, STRATEGY_ADDRESS)
+  tx = await ins.setCollateralStrategy(LEND_TOKEN_ADDRESS, COLLATERAL_TOKEN_ADDRESS, COLLATERAL_STRATEGY_ADDRESS, SUPPLY_STRATEGY_ADDRESS)
   await waitForMint(tx.hash)
   console.log('ONXPlatform setCollateralStrategy')
 }
@@ -256,14 +309,17 @@ async function main() {
 
   await deploy()
   console.log(`
+    ONXFARM_ADDRESS = ${ONXFARM_ADDRESS}
     ONX_ADDRESS = ${ONX_ADDRESS}
+    ===============================
     PLATFORM_ADDRESS = ${PLATFORM_ADDRESS}
     CONFIG_ADDRESS = ${CONFIG_ADDRESS}
     FACTORY_ADDRESS = ${FACTORY_ADDRESS}
+    ONX_SUPPLY_TOKEN_ADDRESS = ${ONX_SUPPLY_TOKEN_ADDRESS}
 
-    ===============================
-    ONXFARM_ADDRESS = ${ONXFARM_ADDRESS}
-    STRATEGY_ADDRESS = ${STRATEGY_ADDRESS}
+    ===============================    
+    COLLATERAL_STRATEGY_ADDRESS = ${COLLATERAL_STRATEGY_ADDRESS}
+    SUPPLY_STRATEGY_ADDRESS = ${SUPPLY_STRATEGY_ADDRESS}
     
     LEND_TOKEN_ADDRESS = ${LEND_TOKEN_ADDRESS}
     COLLATERAL_TOKEN_ADDRESS = ${COLLATERAL_TOKEN_ADDRESS}

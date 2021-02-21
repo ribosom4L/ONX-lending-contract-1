@@ -23,7 +23,7 @@ interface IONXFarm {
     function poolInfo(uint _index) external view returns(address, uint256, uint256, uint256);
 }
 
-contract ONXStrategyCollateral is IONXStrategy, BaseShareField, Initializable {
+contract ONXStrategy is IONXStrategy, BaseShareField, Initializable {
 	event Mint(address indexed user, uint256 amount);
 	using SafeMath for uint256;
 	address public override interestToken;

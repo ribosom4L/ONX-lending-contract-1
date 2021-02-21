@@ -66,6 +66,7 @@ contract ONXPool is BaseMintField, Configurable {
 	uint256 public lastInterestUpdate;
 
 	address public collateralStrategy;
+	address public supplyStrategy;
 
 	uint256 public payoutRatio;
 
@@ -87,9 +88,10 @@ contract ONXPool is BaseMintField, Configurable {
 		factory = _factory;
 	}
 
-	function setCollateralStrategy(address _collateralStrategy) external onlyPlatform
+	function setCollateralStrategy(address _collateralStrategy, address _supplyStrategy) external onlyPlatform
 	{
 		collateralStrategy = _collateralStrategy;
+		supplyStrategy = _supplyStrategy;
 	}
 
 	function init(address _supplyToken, address _collateralToken) external onlyFactory {
@@ -161,6 +163,15 @@ contract ONXPool is BaseMintField, Configurable {
 		remainSupply = remainSupply.add(amountDeposit);
 
 		totalStake = totalStake.add(amountDeposit);
+
+		if(supplyStrategy != address(0) &&
+			address(IERC20(IONXStrategy(supplyStrategy).farmToken())) != address(0) &&
+			amountDeposit > 0)
+		{
+			IERC20(IONXStrategy(supplyStrategy).farmToken()).approve(supplyStrategy, amountDeposit);
+			IONXStrategy(supplyStrategy).invest(from, amountDeposit);
+		}
+
 		_increaseLenderProductivity(from, amountDeposit);
 
 		_setConfig(_interestSettled_SS, from, interestPerSupply.mul(getConfig(_amountSupply_SS, from)).div(1e18));
@@ -239,6 +250,14 @@ contract ONXPool is BaseMintField, Configurable {
 		totalLiquidationSupplyAmount = totalLiquidationSupplyAmount.sub(withdrawLiquidationSupplyAmount);
 		totalPledge = totalPledge.sub(withdrawLiquidation);
 
+		if(supplyStrategy != address(0) &&
+		address(IERC20(IONXStrategy(supplyStrategy).farmToken())) != address(0) &&
+		amountWithdraw > 0)
+		{			
+			IONXStrategy(supplyStrategy).withdraw(from, amountWithdraw);
+			TransferHelper.safeTransfer(IONXStrategy(supplyStrategy).farmToken(), msg.sender, amountWithdraw);
+		}
+
 		_setConfig(_interests_SS, from, getConfig(_interests_SS, from).sub(withdrawInterest));
 		_setConfig(_liquidation_SS, from, getConfig(_liquidation_SS, from).sub(withdrawLiquidation));
 		_setConfig(_amountSupply_SS, from, getConfig(_amountSupply_SS, from).sub(amountWithdraw));
@@ -282,7 +301,7 @@ contract ONXPool is BaseMintField, Configurable {
 			amountIn = amountIn.sub(totalPledge);
 		}
 
-		require(amountCollateral <= amountIn , "AAAA: INVALID AMOUNT");
+		require(amountCollateral <= amountIn , "ONX: INVALID AMOUNT");
 
 		updateInterests(false);
 
