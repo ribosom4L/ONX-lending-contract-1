@@ -19,14 +19,12 @@ module.exports = {
     ropsten: {
       url: `https://ropsten.infura.io/v3/${keys.networks.ropsten.infuraKey}`,
       accounts: [keys.networks.ropsten.privateKey],
-      gasMultiplier: 1.25,
-      gasPrice: 80
+      gasMultiplier: 1.25
     },
     mainnet: {
       url: `https://mainnet.infura.io/v3/${keys.networks.mainnet.infuraKey}`,
       accounts: [keys.networks.mainnet.privateKey],
-      gasMultiplier: 1.25,
-      gasPrice: 80
+      gasMultiplier: 1.25
     },
   },
   solidity: {
