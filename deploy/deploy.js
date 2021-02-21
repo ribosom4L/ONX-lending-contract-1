@@ -1,6 +1,7 @@
 let fs = require("fs");
 let path = require("path");
-const {ethers, upgrades, network} = require("hardhat");
+const hardhat = require("hardhat");
+const {ethers, upgrades, network} = hardhat
 
 // const ERC20 = require("../artifacts/contracts/test/ERC20TOKEN.sol/ERC20TOKEN.json")
 const WETH = require("../artifacts/contracts/weth/WETH.sol/WETH9.json")
@@ -36,7 +37,7 @@ const { payout, weth, deployer } = keys.networks[network.name];
 
 WETH_ADDRESS = weth
 PAYOUT_ADDRESS = payout
-
+const provider = network.name === 'hardhat' ? ethers.provider : ethers.getDefaultProvider( network.name)
 const config = {
   "gasPrice": "80",
   "walletDev": deployer,
@@ -53,9 +54,8 @@ if (fs.existsSync(path.join(__dirname, ".config.json"))) {
 }
 
 console.log("CURRENT NETWORK", network.name);
-const provider = ethers.provider
-let signer;
 
+let signer;
 const sleep = ms =>
   new Promise(resolve =>
     setTimeout(() => {
