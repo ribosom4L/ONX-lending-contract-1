@@ -159,23 +159,42 @@ async function deploy() {
 
   // FACTORY
   factory = await ethers.getContractFactory("ONXFactory")
-  ins = await upgrades.deployProxy(factory, [])
-  ins = await ins.deployed();
+  // ins = await upgrades.deployProxy(factory, [])
+  ins = await factory.deploy()
+  // ins = await ins.deployed();
   await waitForMint(ins.deployTransaction.hash)
+
   FACTORY_ADDRESS = ins.address
   // console.log('FACTORY_ADDRESS', FACTORY_ADDRESS)
+
+  ins = new ethers.Contract(
+    FACTORY_ADDRESS,
+    ONXFactory.abi,
+    signer
+  )
+  tx = await ins.initialize()
+  await waitForMint(tx.hash)
+  console.log('factory initialized')
 
   // PLATFORM
   factory = await ethers.getContractFactory("ONXPlatform")
 
   // ins = await upgrades.deployProxy(factory, [])
-  ins = await upgrades.deployProxy(factory, [PAYOUT_ADDRESS, ONX_SUPPLY_TOKEN_ADDRESS])
-  await ins.deployed()
+  ins = await factory.deploy()
+  // await ins.deployed()
 
   await waitForMint(ins.deployTransaction.hash)
 
   PLATFORM_ADDRESS = ins.address
   console.log('PLATFORM_ADDRESS', PLATFORM_ADDRESS)
+
+  ins = new ethers.Contract(
+    PLATFORM_ADDRESS,
+    ONXPlatform.abi,
+    signer
+  )
+  tx = await ins.initialize(PAYOUT_ADDRESS, ONX_SUPPLY_TOKEN_ADDRESS)
+  await waitForMint(tx.hash)
 
   // ONX Supply token transferownership
   ins = new ethers.Contract(
@@ -234,12 +253,22 @@ async function deploy() {
   // ONX Pool contract
   factory = await ethers.getContractFactory("ONXPool")
 
-  ins = await upgrades.deployProxy(factory, [FACTORY_ADDRESS])
+  // ins = await upgrades.deployProxy(factory, [FACTORY_ADDRESS])
+  ins = await factory.deploy()
+  // await ins.deployed()
+  await waitForMint(ins.deployTransaction.hash)
 
-  await ins.deployed()
-
-  console.log("tx:", ins.deployTransaction.hash)
   AETH_POOL_ADDRESS = ins.address
+
+  ins = new ethers.Contract(
+    AETH_POOL_ADDRESS,
+    ONXPool.abi,
+    signer
+  )
+  tx = await ins.initialize(FACTORY_ADDRESS)
+
+  await waitForMint(tx.hash)
+  console.log('Pool initialized')
 
   ins = new ethers.Contract(
     FACTORY_ADDRESS,
