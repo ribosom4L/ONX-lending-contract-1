@@ -147,7 +147,7 @@ async function deploy() {
   )
   tx = await ins.add(20, ONX_SUPPLY_TOKEN_ADDRESS, false)
   await waitForMint(tx.hash)
-  console.log('ONX SUPPLY TOKEN POOL added in onx farm')
+  // console.log('ONX SUPPLY TOKEN POOL added in onx farm')
 
   // CONFIG
   factory = await ethers.getContractFactory("ONXConfig")
@@ -163,7 +163,7 @@ async function deploy() {
   ins = await ins.deployed();
   await waitForMint(ins.deployTransaction.hash)
   FACTORY_ADDRESS = ins.address
-  console.log('FACTORY_ADDRESS', FACTORY_ADDRESS)
+  // console.log('FACTORY_ADDRESS', FACTORY_ADDRESS)
 
   // PLATFORM
   factory = await ethers.getContractFactory("ONXPlatform")
@@ -179,7 +179,7 @@ async function deploy() {
 
   // ONX Supply token transferownership
   ins = new ethers.Contract(
-    ONXFARM_ADDRESS,
+    ONX_SUPPLY_TOKEN_ADDRESS,
     ONXSupplyToken.abi,
     signer
   )
@@ -195,7 +195,7 @@ async function deploy() {
   )
   tx = await ins.setupConfig(CONFIG_ADDRESS)
   await waitForMint(tx.hash)
-  console.log('ONXPlatform setConfig')
+  // console.log('ONXPlatform setConfig')
 
   ins = new ethers.Contract(
     FACTORY_ADDRESS,
@@ -204,7 +204,7 @@ async function deploy() {
   )
   tx = await ins.setupConfig(CONFIG_ADDRESS)
   await waitForMint(tx.hash)
-  console.log('ONXFactory setConfig')
+  // console.log('ONXFactory setConfig')
 
   // Config initialize and setWallets
   ins = new ethers.Contract(
@@ -214,7 +214,7 @@ async function deploy() {
   )
   tx = await ins.initialize(PLATFORM_ADDRESS, FACTORY_ADDRESS, ONX_ADDRESS, WETH_ADDRESS)
   await waitForMint(tx.hash)
-  console.log('ONX Config initialized')
+  // console.log('ONX Config initialized')
   tx = await ins.setWallets(
     [
       ethers.utils.formatBytes32String("team"),
@@ -316,6 +316,7 @@ async function main() {
     CONFIG_ADDRESS = ${CONFIG_ADDRESS}
     FACTORY_ADDRESS = ${FACTORY_ADDRESS}
     ONX_SUPPLY_TOKEN_ADDRESS = ${ONX_SUPPLY_TOKEN_ADDRESS}
+    AETH_POOL_ADDRESS = ${AETH_POOL_ADDRESS}
 
     ===============================    
     COLLATERAL_STRATEGY_ADDRESS = ${COLLATERAL_STRATEGY_ADDRESS}
